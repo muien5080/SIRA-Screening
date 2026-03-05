@@ -3,94 +3,111 @@ import torch
 import torch.nn as nn
 import os
 
-# Neural Network Architecture
+# -----------------------------
+# constants
+# -----------------------------
+N = 1000
+DATA_PATH = "results/stochastic_means.npz"
+MODEL_PATH = "results/sir_nn_model.pt"
+
+
+# -----------------------------
+# neural network
+# -----------------------------
 class SIRNet(nn.Module):
+
     def __init__(self):
-        super(SIRNet,self).__init__()
-        
+        super().__init__()
+
         self.net = nn.Sequential(
-            nn.Linear(1,64),
-            nn.Tanh(),
-            nn.Linear(64,64),
-            nn.Tanh(),
-            nn.Linear(64,3)
+            nn.Linear(1,128),
+            nn.ReLU(),
+            nn.Linear(128,128),
+            nn.ReLU(),
+            nn.Linear(128,64),
+            nn.ReLU(),
+            nn.Linear(64,3),
+            nn.Sigmoid()   # ensures outputs in [0,1]
         )
-    
+
     def forward(self,t):
         return self.net(t)
-    
-# Load Stochastic simulation Data
 
-def load_data(path="results/stochastic_means.npz"):
-    if not os.path.exists(path):
+
+# -----------------------------
+# load stochastic data
+# -----------------------------
+def load_data():
+
+    if not os.path.exists(DATA_PATH):
         raise FileNotFoundError(
             "Run stochastic_sir.py first to generate stochastic_means.npz"
         )
-    
-    data = np.load(path)
+
+    data = np.load(DATA_PATH)
+
     t = data["t"]
     S = data["S"]
     I = data["I"]
     R = data["R"]
+
     y = np.vstack([S,I,R]).T
+
     return t,y
 
-# Training Function
 
-def train_model(beta = 0.3, gamma = 0.1, epochs = 5000, lr = 1e-3):
-    t, y = load_data
-    
-    # convert to torch tensors
-    t = torch.tensor(t,dtype=torch.float32).view(-1,1)
-    y = torch.tensor(y,dtype=torch.float32)
-    t.requires_grad(True)
-    
-    model = SIRNet
-    optimizer = torch.optim.Adam(model.parameters(),lr=lr)
-    mse = nn.MSELoss()
-    
-    for epoch in range (epochs):
-        pred = model(t)
-        S_pred = pred [:,0]
-        I_pred = pred [:,1]
-        R_pred = pred [:,2]
-        
-        # Data Loss
-        data_loss = mse(pred,y)
-        
-        # Physics Loss
-        dS_dt = torch.autograd.grad(S_pred.sum(),t,create_graph=True)[0]
-        dI_dt = torch.autograd.grad(I_pred.sum(),t,create_graph=True)[0]
-        dR_dt = torch.autograd.grad(R_pred.sum(),t,create_graph=True)[0]
-        
-        physics_S = dS_dt + beta * S_pred * I_pred / 1000
-        physics_I = dI_dt - beta * S_pred * I_pred / 1000 + gamma * I_pred
-        physics_R = dR_dt - gamma * I_pred
-        
-        physics_loss = (
-            mse(physics_S, torch.zeros_like(physics_S)) + 
-            mse(physics_I, torch.zeros_like(physics_I)) + 
-            mse(physics_R, torch.zeros_like(physics_R))
-        )
-        
-        loss = data_loss + physics_loss
-        
+# -----------------------------
+# training
+# -----------------------------
+def train_model(epochs=5000, lr=1e-3):
+
+    t, y = load_data()
+
+    # normalize
+    t_norm = t / t.max()
+    y_norm = y / N
+
+    t_tensor = torch.from_numpy(t_norm.astype(np.float32)).view(-1,1)
+    y_tensor = torch.from_numpy(y_norm.astype(np.float32))
+
+    model = SIRNet()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = nn.MSELoss()
+
+    for epoch in range(epochs):
+
+        pred = model(t_tensor)
+
+        loss = loss_fn(pred, y_tensor)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
-        if epoch%500 == 0:
-            print(f"Epoch {epoch} | Loss: {loss.item():.6f}")
-            
-        return model
-    
-# Save Trained Model
+
+        if epoch % 500 == 0:
+            print(f"Epoch {epoch} | Loss {loss.item():.6f}")
+
+    return model
+
+
+# -----------------------------
+# save model
+# -----------------------------
 def save_model(model):
-    os.makedirs("results",exist_ok=True)
-    torch.save(model.state_dict(), "results/sir_pinn_model.pt")
-    print("Model saved to results/sir_pinn_model.pt")
-    
-# Run Training
+
+    os.makedirs("results", exist_ok=True)
+
+    torch.save(model.state_dict(), MODEL_PATH)
+
+    print("Model saved to", MODEL_PATH)
+
+
+# -----------------------------
+# main
+# -----------------------------
 if __name__ == "__main__":
+
     model = train_model()
+
     save_model(model)

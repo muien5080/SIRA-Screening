@@ -1,4 +1,3 @@
-# src/stochastic_sir.py
 import numpy as np
 import os
 
@@ -36,7 +35,7 @@ def run_stochastic_sir(beta=0.3, gamma=0.1, N=1000, I0=10, t_max=160, dt=1, num_
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    # --- State change vectors ---
+    # State change vectors
     v1 = np.array([-1, +1, 0])  # Infection: S -> I
     v2 = np.array([0, -1, +1])  # Recovery: I -> R
 
@@ -54,7 +53,7 @@ def run_stochastic_sir(beta=0.3, gamma=0.1, N=1000, I0=10, t_max=160, dt=1, num_
         I_values = [state[1]]
         R_values = [state[2]]
 
-        while state[1] > 0:
+        while state[1] > 0  and current_time < t_max:
             S = state[0]
             I = state[1]
             a1 = beta * S * I / N
@@ -77,7 +76,7 @@ def run_stochastic_sir(beta=0.3, gamma=0.1, N=1000, I0=10, t_max=160, dt=1, num_
 
         return np.array(t_values), np.array(S_values), np.array(I_values), np.array(R_values)
 
-    # --- Run multiple stochastic simulations ---
+    # Run multiple stochastic simulations
     for run in range(num_runs):
         X0 = np.array([N - I0, I0, 0])  # Initial state
         t0 = 0  # Start time
@@ -93,7 +92,7 @@ def run_stochastic_sir(beta=0.3, gamma=0.1, N=1000, I0=10, t_max=160, dt=1, num_
     I_mean = I_all.mean(axis=0)
     R_mean = R_all.mean(axis=0)
 
-    # --- Save results (if specified) ---
+    # Save results (if specified)
     if save_results:
         os.makedirs('results', exist_ok=True)
         np.savez('results/stochastic_means.npz', t=time_grid, S=S_mean, I=I_mean, R=R_mean)
