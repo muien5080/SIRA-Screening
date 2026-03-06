@@ -28,25 +28,26 @@ The workflow follows these steps:
 ---
 
 ## Repository Structure
+
+```
 SIRA-screening/
 │
 ├── notebooks/
-│ └── sir_experiments.ipynb # Main experiment notebook
+│   └── sir_experiments.ipynb        # Main experiment notebook
 │
 ├── src/
-│ ├── stochastic_sir.py # Gillespie stochastic simulation
-│ ├── deterministic_sir.py # Deterministic ODE SIR model
-│ └── ml_model.py # Neural network training
+│   ├── stochastic_sir.py            # Gillespie stochastic simulation
+│   ├── deterministic_sir.py         # Deterministic ODE SIR model
+│   └── ml_model.py                  # Neural network training
 │
 ├── results/
-│ ├── stochastic_means.npz # Mean stochastic trajectories
-│ ├── deterministic_sir.npz # Deterministic solution
-│ └── sir_nn_model.pt # Trained neural network
+│   ├── stochastic_means.npz         # Mean stochastic trajectories
+│   ├── deterministic_sir.npz        # Deterministic solution
+│   └── sir_nn_model.pt              # Trained neural network
 │
 ├── requirements.txt
 └── README.md
-
-
+```
 ---
 
 ## SIR Model
@@ -58,9 +59,11 @@ The classical SIR model divides the population into three compartments:
 - **R(t)** – Recovered individuals
 
 The deterministic equations are:
+```
 dS/dt = -β S I / N
 dI/dt = β S I / N − γ I
 dR/dt = γ I
+```
 
 
 Where:
@@ -162,22 +165,41 @@ Clone the repository:
 ```bash
 git clone https://github.com/yourusername/SIRA-screening.git
 cd SIRA-screening
+```
 
 Install dependencies:
-   pip install -r requirements.txt
 
-Running the Pipeline
-1. Run stochastic simulations
+```bash
+pip install -r requirements.txt
+```
+
+## Running the Pipeline
+
+Run stochastic simulations:
+
+```bash
 python src/stochastic_sir.py
-2. Run deterministic model
+```
+
+Run deterministic model:
+
+```bash
 python src/deterministic_sir.py
-3. Train the ML model
+```
+
+Train the ML model:
+
+```bash
 python src/ml_model.py
-4. Explore results
+```
+
+Explore results:
 
 Open the notebook:
 
+```bash
 notebooks/sir_experiments.ipynb
+```
 
 ## AI Assistance Disclosure
 
