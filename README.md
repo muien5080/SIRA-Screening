@@ -200,14 +200,23 @@ Open the notebook:
 File: `notebooks/experiments.ipynb`
 
 Run all cells to:
+
 generate epidemic simulations
+
 train the neural network
+
 visualize epidemic trajectories
+
 evaluate prediction accuracy
 
 Example Outputs:
+
 The project produces,
+
 stochastic epidemic trajectories
+
 deterministic SIR curves
+
 neural network predictions of epidemic dynamics
+
 prediction error plots
