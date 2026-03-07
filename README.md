@@ -36,7 +36,7 @@ SIRA-screening/
 │   └── sir_experiments.ipynb        # Main experiment notebook
 │
 ├── src/
-│   ├── stochastic_sir.py            # Gillespie stochastic simulation
+│   ├── stochastic_sir.py            # Poisson-distributed infection and recovery events
 │   ├── deterministic_sir.py         # Deterministic ODE SIR model
 │   └── ml_model.py                  # Neural network training
 │
