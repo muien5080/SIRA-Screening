@@ -2,18 +2,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import os
+import matplotlib.pyplot as plt
 
-# -----------------------------
-# constants
-# -----------------------------
-N = 1000
-DATA_PATH = "results/stochastic_means.npz"
+from sklearn.metrics import mean_squared_error, r2_score
+
+np.random.seed(42)
+torch.manual_seed(42)
+
+DATA_PATH = "results/stochastic_dataset.npz"
 MODEL_PATH = "results/sir_nn_model.pt"
 
 
-# -----------------------------
-# neural network
-# -----------------------------
 class SIRNet(nn.Module):
 
     def __init__(self):
@@ -27,22 +26,14 @@ class SIRNet(nn.Module):
             nn.Linear(128,64),
             nn.ReLU(),
             nn.Linear(64,3),
-            nn.Sigmoid()   # ensures outputs in [0,1]
+            nn.Sigmoid()
         )
 
-    def forward(self,t):
+    def forward(self, t):
         return self.net(t)
 
 
-# -----------------------------
-# load stochastic data
-# -----------------------------
 def load_data():
-
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError(
-            "Run stochastic_sir.py first to generate stochastic_means.npz"
-        )
 
     data = np.load(DATA_PATH)
 
@@ -51,24 +42,31 @@ def load_data():
     I = data["I"]
     R = data["R"]
 
-    y = np.vstack([S,I,R]).T
+    X = []
+    Y = []
 
-    return t,y
+    for i in range(S.shape[0]):
+
+        y = np.vstack([S[i], I[i], R[i]]).T
+
+        X.append(t)
+        Y.append(y)
+
+    X = np.concatenate(X)
+    Y = np.concatenate(Y)
+
+    return X, Y
 
 
-# -----------------------------
-# training
-# -----------------------------
-def train_model(epochs=5000, lr=1e-3):
+def train_model(epochs=3000, lr=1e-3):
 
     t, y = load_data()
 
-    # normalize
     t_norm = t / t.max()
-    y_norm = y / N
+    y_norm = y / 1000
 
-    t_tensor = torch.from_numpy(t_norm.astype(np.float32)).view(-1,1)
-    y_tensor = torch.from_numpy(y_norm.astype(np.float32))
+    t_tensor = torch.tensor(t_norm, dtype=torch.float32).view(-1,1)
+    y_tensor = torch.tensor(y_norm, dtype=torch.float32)
 
     model = SIRNet()
 
@@ -88,26 +86,46 @@ def train_model(epochs=5000, lr=1e-3):
         if epoch % 500 == 0:
             print(f"Epoch {epoch} | Loss {loss.item():.6f}")
 
-    return model
+    return model, t_tensor, y_tensor
 
 
-# -----------------------------
-# save model
-# -----------------------------
-def save_model(model):
+def evaluate(model, t_tensor, y_tensor):
+
+    with torch.no_grad():
+        pred = model(t_tensor).numpy()
+
+    y_true = y_tensor.numpy()
+
+    mse = mean_squared_error(y_true, pred)
+    r2 = r2_score(y_true, pred)
+
+    print("MSE:", mse)
+    print("R2:", r2)
+
+    error = np.abs(y_true - pred).mean(axis=1)
+
+    plt.figure()
+    plt.plot(error)
+    plt.title("Prediction Error vs Time")
+    plt.xlabel("Time index")
+    plt.ylabel("Mean Absolute Error")
 
     os.makedirs("results", exist_ok=True)
+    plt.savefig("results/error_plot.png")
+
+    print("Error plot saved")
+
+
+def save_model(model):
 
     torch.save(model.state_dict(), MODEL_PATH)
+    print("Model saved:", MODEL_PATH)
 
-    print("Model saved to", MODEL_PATH)
 
-
-# -----------------------------
-# main
-# -----------------------------
 if __name__ == "__main__":
 
-    model = train_model()
+    model, t_tensor, y_tensor = train_model()
+
+    evaluate(model, t_tensor, y_tensor)
 
     save_model(model)

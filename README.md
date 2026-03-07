@@ -4,30 +4,30 @@ This repository implements a small research-style pipeline for simulating and an
 
 The project combines three components:
 
-1. A **stochastic epidemic simulator** using the Gillespie algorithm
-2. A **deterministic SIR model** solved with ordinary differential equations
-3. A **machine learning model** that learns to predict the mean epidemic trajectories
+1. A **stochastic epidemic simulator**
+2. A **deterministic SIR model**
+3. A **machine learning model** that learns epidemic trajectories from simulation data
 
-The goal is to demonstrate how simulation data can be used to train a neural network that approximates the evolution of an epidemic over time.
-
----
-
-## Project Overview
-
-The workflow follows these steps:
-
-1. Simulate an epidemic using a **stochastic SIR model**.
-2. Run a **deterministic SIR model** for comparison.
-3. Compute the **mean epidemic trajectory** from multiple stochastic runs.
-4. Train a **neural network** to learn the mapping
-   t → (S(t), I(t), R(t))
-
-
-5. Compare ML predictions with both stochastic and deterministic results.
+The goal is to demonstrate how **simulation data can be used to train a neural network that approximates the evolution of an epidemic over time.**
 
 ---
 
-## Repository Structure
+# Project Overview
+
+The workflow of the project is:
+
+1. Generate epidemic simulations using a **stochastic SIR model**
+2. Run a **deterministic SIR model** for comparison
+3. Train a **neural network** to learn the mapping
+    t → (S(t), I(t), R(t))
+
+4. Evaluate the model using **Mean Squared Error (MSE)** and **R² score**
+5. Visualize prediction errors and epidemic trajectories
+
+---
+
+# Repository Structure
+
 
 ```
 SIRA-screening/
@@ -50,15 +50,21 @@ SIRA-screening/
 ```
 ---
 
-## SIR Model
 
-The classical SIR model divides the population into three compartments:
+---
 
-- **S(t)** – Susceptible individuals
-- **I(t)** – Infected individuals
-- **R(t)** – Recovered individuals
+# SIR Epidemic Model
 
-The deterministic equations are:
+The SIR model divides the population into three compartments:
+
+| Variable | Meaning |
+|--------|--------|
+| **S(t)** | Susceptible population |
+| **I(t)** | Infected population |
+| **R(t)** | Recovered population |
+
+The deterministic SIR equations are:
+
 ```
 dS/dt = -β S I / N
 dI/dt = β S I / N − γ I
@@ -78,20 +84,23 @@ Where:
 
 File: `src/stochastic_sir.py`
 
-The stochastic epidemic is simulated using the **Gillespie algorithm**.
 
-Two events are possible:
+The stochastic simulator generates epidemic trajectories using **Poisson-distributed infection and recovery events**.
 
-| Event | State Change |
-|------|-------------|
-| Infection | S → I |
-| Recovery | I → R |
+Multiple epidemics are simulated across different parameter values:
+β ∈ [0.2, 0.5]
+γ ∈ [0.05, 0.2]
 
-Multiple simulation runs are performed and the **mean trajectories** are computed.
+The dataset is saved as:
 
-Output saved to:
-'results/stochastic_means.npz'
+File: `results/stochastic_dataset.npz`
 
+Stored variables:
+
+t : time points
+S : susceptible trajectories
+I : infected trajectories
+R : recovered trajectories
 
 ---
 
@@ -99,12 +108,12 @@ Output saved to:
 
 File: `src/deterministic_sir.py`
 
-The deterministic model solves the SIR differential equations using `scipy.integrate.odeint`.
 
-This provides a smooth approximation of the epidemic dynamics, which can be compared to the stochastic mean.
+This script simulates the deterministic SIR equations using discrete time updates.
 
-Output saved to:
-   results/deterministic_sir.npz
+Output:
+
+File:   `results/deterministic_sir.npz`
 
 
 ---
@@ -113,7 +122,7 @@ Output saved to:
 
 File: `src/ml_model.py`
 
-A neural network is trained to predict the epidemic trajectories.
+A neural network is trained to predict the epidemic dynamics.
 
 ### Model Architecture
 Input: time t
@@ -129,89 +138,76 @@ The network predicts:
 [S(t), I(t), R(t)]
 
 
-normalized by population size.
-
-Training uses **Mean Squared Error (MSE)** between predictions and stochastic mean trajectories.
 
 The trained model is saved as:
-results/sir_nn_model.pt
+File: `results/sir_nn_model.pt`
+
+
+
+---
+
+# Evaluation Metrics
+
+Model performance is evaluated using:
+
+- **Mean Squared Error (MSE)**
+- **R² score**
+
+The project also generates a diagnostic visualization:
+
+Prediction Error vs Time
+
+Saved as:
+File: `results/error_plot.png`
 
 
 ---
 
-## Notebook Experiments
-
-The notebook `notebooks/sir_experiments.ipynb` demonstrates the full workflow:
-
-1. Load stochastic simulation results
-2. Plot S, I, R epidemic curves
-3. Compare stochastic vs deterministic models
-4. Load the trained neural network
-5. Generate ML predictions
-6. Compare predictions with simulation data
-
-Example outputs include:
-
-- Mean stochastic epidemic curves
-- Stochastic vs deterministic comparison
-- ML prediction vs true epidemic trajectory
-
----
-
-## Installation
+# Installation
 
 Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/SIRA-screening.git
-cd SIRA-screening
+git clone https://github.com/muien5080/SIRA-Screening.git
+cd SIRA-Screening
 ```
-
 Install dependencies:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-## Running the Pipeline
+Running the Pipeline
 
-Run stochastic simulations:
-
+Generate stochastic epidemic dataset:
 ```bash
 python src/stochastic_sir.py
 ```
 
-Run deterministic model:
-
+Run deterministic SIR model:
 ```bash
 python src/deterministic_sir.py
 ```
 
-Train the ML model:
-
+Train the neural network model:
 ```bash
 python src/ml_model.py
 ```
 
-Explore results:
+Running Experiments
 
 Open the notebook:
 
-```bash
-notebooks/sir_experiments.ipynb
-```
+File: `notebooks/experiments.ipynb`
 
-## AI Assistance Disclosure
+Run all cells to:
+generate epidemic simulations
+train the neural network
+visualize epidemic trajectories
+evaluate prediction accuracy
 
-Parts of the documentation and debugging process for this project were assisted using **ChatGPT (OpenAI)**.
-
-Specifically, ChatGPT was used to:
-
-- Help debug issues in the machine learning training pipeline
-- Verify the correctness of stochastic and deterministic SIR implementations
-- Assist in writing and formatting this README file
-- Suggest improvements to code organization and reproducibility
-
-All implementation decisions, simulations, and experiments were designed, implemented, and validated by the author.
-
-The use of AI assistance was limited to **code explanation, documentation support, and debugging guidance**, and the final repository structure and results were verified manually.
+Example Outputs:
+The project produces,
+stochastic epidemic trajectories
+deterministic SIR curves
+neural network predictions of epidemic dynamics
+prediction error plots

@@ -1,61 +1,48 @@
 import numpy as np
-from scipy.integrate import odeint
 import os
 
+N = 1000
+beta = 0.3
+gamma = 0.1
 
-def sir_ode(y, t, beta, gamma, N):
-    """
-    SIR differential equations.
-    
-    dS/dt = -beta * S * I / N
-    dI/dt = beta * S * I / N - gamma * I
-    dR/dt = gamma * I
-    """
-
-    S, I, R = y
-    dSdt = -beta * S * I / N
-    dIdt = beta * S * I / N - gamma * I
-    dRdt = gamma * I
-    return [dSdt, dIdt, dRdt]
+T = 160
+dt = 1
 
 
-def run_deterministic_sir(beta=0.3, gamma=0.1, N=1000, I0=10, t_max=160, save_results=False):
-    """
-    Run deterministic SIR simulation.
-    Arguments:
-        beta (float): infection rate
-        gamma (float): recovery rate
-        N (int): total population
-        I0 (int): initial infected
-        t_max (int): simulation time
-        save_results (bool): save results to disk
+def simulate():
 
-    Returns:
-        t, S, I, R
-    """
+    S = np.zeros(T)
+    I = np.zeros(T)
+    R = np.zeros(T)
 
-    if I0 <= 0 or I0 >= N:
-        raise ValueError("I0 must be between 0 and N")
+    S[0] = N - 1
+    I[0] = 1
+    R[0] = 0
 
-    S0 = N - I0
-    R0 = 0
-    y0 = [S0, I0, R0]
-    t = np.linspace(0, t_max, t_max + 1)
-    sol = odeint(sir_ode, y0, t, args=(beta, gamma, N))
-    S, I, R = sol.T
+    for t in range(1, T):
 
-    if save_results:
-        os.makedirs("results", exist_ok=True)
-        np.savez("results/deterministic_sir.npz", t=t, S=S, I=I, R=R)
+        dS = -beta * S[t-1] * I[t-1] / N
+        dI = beta * S[t-1] * I[t-1] / N - gamma * I[t-1]
+        dR = gamma * I[t-1]
 
-    return t, S, I, R
+        S[t] = S[t-1] + dS
+        I[t] = I[t-1] + dI
+        R[t] = R[t-1] + dR
+
+    return S, I, R
 
 
 if __name__ == "__main__":
-    t, S, I, R = run_deterministic_sir(save_results=True)
-    print("Deterministic SIR simulation complete")
-    print("Final values:")
-    print("S:", S[-1])
-    print("I:", I[-1])
-    print("R:", R[-1])
-    
+
+    S, I, R = simulate()
+
+    os.makedirs("results", exist_ok=True)
+
+    np.savez(
+        "results/deterministic_sir.npz",
+        S=S,
+        I=I,
+        R=R
+    )
+
+    print("Deterministic simulation saved")
